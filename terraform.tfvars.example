@@ -1,0 +1,119 @@
+# Example Terraform Variables Configuration
+# Copy this file to terraform.tfvars and customize the values for your environment
+# cp terraform.tfvars.example terraform.tfvars
+
+# ============================================================================
+# REQUIRED VARIABLES - You must provide these
+# ============================================================================
+
+# General Configuration
+prefix   = "pri"     # Prefix for all resource names
+location = "eastus"  # Azure region (e.g., eastus, westus2, centralus)
+env      = "qa"      # Environment (e.g., dev, qa, staging, prod)
+
+# ============================================================================
+# OPTIONAL VARIABLES - Have sensible defaults but can be customized
+# ============================================================================
+
+# Kubernetes Configuration
+kubernetes_version      = "1.30.7"  # Kubernetes version
+private_cluster_enabled = true      # Set to false for public cluster
+
+# Network Configuration
+vnet_address_space          = ["10.172.0.0/18"]   # VNet CIDR block
+aks_subnet_address_prefixes = ["10.172.0.0/19"]   # AKS subnet CIDR
+pe_subnet_address_prefixes  = ["10.172.32.0/24"]  # Private endpoints subnet CIDR
+
+# AKS Configuration
+service_cidr   = "172.16.0.0/16"  # Kubernetes services CIDR (must not overlap with VNet)
+dns_service_ip = "172.16.0.10"    # Kubernetes DNS IP (must be within service_cidr)
+network_plugin = "azure"          # "azure" or "kubenet"
+network_policy = "azure"          # "azure", "calico", or "cilium"
+sku_tier       = "Free"           # "Free" or "Standard"
+
+# Default Node Pool Configuration
+default_node_pool_name                = "systempool"
+default_node_pool_vm_size             = "Standard_DS2_v2"
+default_node_pool_enable_auto_scaling = true
+default_node_pool_min_count           = 1
+default_node_pool_max_count           = 3
+default_node_pool_max_pods            = 110
+
+# ============================================================================
+# ADDITIONAL NODE POOLS - Dynamic configuration for multiple node pools
+# ============================================================================
+# You can define multiple custom node pools here
+# Each key becomes the node pool name
+
+node_pools = {
+  # Example: Spot node pool for cost-effective workloads
+  spot = {
+    vm_size         = "Standard_D4s_v4"
+    min_count       = 0
+    max_count       = 4
+    os_disk_size_gb = 125
+    priority        = "Spot"
+    eviction_policy = "Delete"
+    spot_max_price  = "-1"  # "-1" = use default/maximum price (recommended), or set specific price like "0.3"
+    node_labels = {
+      "kubernetes.azure.com/scalesetpriority" = "spot"
+      "workload-type"                         = "batch"
+    }
+    node_taints = ["kubernetes.azure.com/scalesetpriority=spot:NoSchedule"]
+  },
+
+  # Example: Regular node pool for production workloads
+  # production = {
+  #   vm_size         = "Standard_D4s_v4"
+  #   min_count       = 2
+  #   max_count       = 5
+  #   os_disk_size_gb = 125
+  #   priority        = "Regular"
+  #   eviction_policy = "Delete"  # Not used for Regular, but required
+  #   spot_max_price  = "-1"      # Not used for Regular, but required
+  #   node_labels = {
+  #     "workload-type" = "production"
+  #   }
+  #   node_taints = []
+  # },
+
+  # Example: High-memory node pool for memory-intensive workloads
+  # highmem = {
+  #   vm_size         = "Standard_E8s_v3"  # 8 vCPUs, 64 GB RAM
+  #   min_count       = 0
+  #   max_count       = 2
+  #   os_disk_size_gb = 256
+  #   priority        = "Regular"
+  #   eviction_policy = "Delete"
+  #   spot_max_price  = "-1"
+  #   node_labels = {
+  #     "workload-type" = "memory-intensive"
+  #   }
+  #   node_taints = ["workload-type=memory-intensive:NoSchedule"]
+  # },
+
+  # Example: GPU node pool for ML/AI workloads
+  # gpu = {
+  #   vm_size         = "Standard_NC6s_v3"  # 6 vCPUs, 112 GB RAM, 1x V100 GPU
+  #   min_count       = 0
+  #   max_count       = 2
+  #   os_disk_size_gb = 512
+  #   priority        = "Regular"
+  #   eviction_policy = "Delete"
+  #   spot_max_price  = "-1"
+  #   node_labels = {
+  #     "workload-type" = "gpu"
+  #     "gpu-type"      = "nvidia-v100"
+  #   }
+  #   node_taints = ["nvidia.com/gpu=true:NoSchedule"]
+  # }
+}
+
+# ============================================================================
+# TAGS - Custom tags for all resources
+# ============================================================================
+tags = {
+  # CostCenter  = "Engineering"
+  # Owner       = "DevOps Team"
+  # ManagedBy   = "Terraform"
+}
