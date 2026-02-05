@@ -30,8 +30,132 @@ This Terraform module deploys Azure Kubernetes Service (AKS) clusters with suppo
 
 - Azure subscription
 - Azure CLI installed
-- Terraform installed
+- Terraform >= 1.0
 - Access to a jumpbox/bastion host in the same VNet (for cluster access)
+
+## Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd terraform-azurerm-private-aks
+   ```
+
+2. **Create your variables file**
+   ```bash
+   cp terraform.tfvars.example terraform.tfvars
+   ```
+
+3. **Customize the variables**
+   Edit `terraform.tfvars` with your desired configuration:
+   ```hcl
+   prefix   = "myproject"
+   location = "eastus"
+   env      = "prod"
+   # ... customize other values
+   ```
+
+4. **Initialize Terraform**
+   ```bash
+   terraform init
+   ```
+
+5. **Plan the deployment**
+   ```bash
+   terraform plan
+   ```
+
+6. **Apply the configuration**
+   ```bash
+   terraform apply
+   ```
+
+## Configuration
+
+All configuration is managed through variables. You can customize the deployment by:
+
+1. **Using terraform.tfvars** (recommended):
+   ```hcl
+   prefix   = "myaks"
+   location = "westus2"
+   env      = "prod"
+   ```
+
+2. **Using command line**:
+   ```bash
+   terraform apply -var="prefix=myaks" -var="env=prod"
+   ```
+
+3. **Using environment variables**:
+   ```bash
+   export TF_VAR_prefix="myaks"
+   export TF_VAR_env="prod"
+   terraform apply
+   ```
+
+### Key Variables
+
+#### Required Variables
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `prefix` | Prefix for resource naming | `"myapp"` |
+| `location` | Azure region | `"eastus"` |
+| `env` | Environment name | `"prod"` |
+
+#### Optional Variables (with defaults)
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `kubernetes_version` | Kubernetes version | `"1.30.7"` |
+| `private_cluster_enabled` | Enable private cluster | `true` |
+| `vnet_address_space` | VNet CIDR blocks | `["10.172.0.0/18"]` |
+| `sku_tier` | AKS SKU tier | `"Free"` |
+| `network_plugin` | Network plugin | `"azure"` |
+| `node_pools` | Additional node pools | `{}` (none) |
+
+See `variables.tf` for the complete list of configurable variables.
+
+### Node Pools
+
+This module supports dynamic node pools. You can define multiple custom node pools in your `terraform.tfvars`:
+
+```hcl
+node_pools = {
+  # Spot instances for cost-effective batch workloads
+  spot = {
+    vm_size         = "Standard_D4s_v4"
+    min_count       = 0
+    max_count       = 4
+    os_disk_size_gb = 125
+    priority        = "Spot"
+    eviction_policy = "Delete"
+    spot_max_price  = "0.3"
+    node_labels = {
+      "workload-type" = "batch"
+    }
+    node_taints = ["kubernetes.azure.com/scalesetpriority=spot:NoSchedule"]
+  },
+
+  # Regular nodes for production workloads
+  production = {
+    vm_size         = "Standard_D8s_v3"
+    min_count       = 2
+    max_count       = 5
+    os_disk_size_gb = 256
+    priority        = "Regular"
+    eviction_policy = "Delete"
+    spot_max_price  = "-1"
+    node_labels = {
+      "workload-type" = "production"
+    }
+    node_taints = []
+  }
+}
+```
+
+See `examples/` directory for more configuration examples:
+- `examples/minimal.tfvars` - Minimal configuration
+- `examples/dev.tfvars` - Development environment
+- `examples/production.tfvars` - Production environment with multiple node pools
 
 ## Network Configuration
 
