@@ -7,14 +7,14 @@
 module "aks" {
   source = "./modules/aks"
 
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = local.location
-  aks_name            = local.aks_name
-  aks_config          = local.aks_config
-  subnet_id           = module.network.aks_subnet_id
-  private_dns_zone_id = module.network.private_dns_zone_id
-  tags                = local.tags
-  kubernetes_version  = local.kubernetes_version
+  resource_group_name     = azurerm_resource_group.rg.name
+  location                = local.location
+  aks_name                = local.aks_name
+  aks_config              = local.aks_config
+  subnet_id               = module.network.aks_subnet_id
+  private_dns_zone_id     = module.network.private_dns_zone_id
+  tags                    = local.tags
+  kubernetes_version      = local.kubernetes_version
   private_cluster_enabled = local.private_cluster_enabled
 }
 
