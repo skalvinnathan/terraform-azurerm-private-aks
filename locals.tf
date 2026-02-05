@@ -8,8 +8,8 @@ locals {
   resource_group_name     = "${local.prefix}-${local.env}-rg"
   vnet_name               = "${local.prefix}-${local.env}-vnet"
   aks_name                = "${local.prefix}-${local.env}-aks"
-  dns_zone_name           = "${local.prefix}.privatelink.${local.location}.azmk8s.io" # Private DNS zone for AKS
-  identity_name           = "${local.prefix}-${local.env}-aks-identity"               # User-assigned managed identity
+  dns_zone_name           = "${local.prefix}.privatelink.${local.location}.azmk8s.io" # Private DNS zone for AKS (only used if private)
+  identity_name           = "${local.prefix}-${local.env}-aks-identity"               # User-assigned managed identity (only used if private)
   kubernetes_version      = var.kubernetes_version
   private_cluster_enabled = var.private_cluster_enabled
 

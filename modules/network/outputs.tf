@@ -7,7 +7,7 @@ output "aks_subnet_id" {
 }
 
 output "pe_subnet_id" {
-  value = azurerm_subnet.pe_subnet.id
+  value = var.private_aks ? azurerm_subnet.pe_subnet[0].id : null
 }
 
 output "private_dns_zone_id" {

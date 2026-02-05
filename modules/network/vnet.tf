@@ -21,8 +21,9 @@ resource "azurerm_subnet" "aks_subnet" {
 }
 
 # Subnet for Private Endpoints
-# This subnet will host private endpoints for Azure services
+# This subnet will host private endpoints for Azure services (only created for private clusters)
 resource "azurerm_subnet" "pe_subnet" {
+  count                = var.private_aks ? 1 : 0
   name                 = var.subnets.private_endpoints.name
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.vnet.name

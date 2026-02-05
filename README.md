@@ -1,14 +1,30 @@
-# Private AKS Cluster with Terraform
+# Azure AKS Cluster with Terraform
 
-This Terraform project deploys a private Azure Kubernetes Service (AKS) cluster with advanced networking features and security controls.
+This Terraform module deploys Azure Kubernetes Service (AKS) clusters with support for both **public** and **private** configurations, advanced networking features, and security controls.
+
+## Features
+
+✅ **Supports both Public and Private AKS clusters**
+✅ **Dynamic node pools** - Add unlimited custom node pools (spot/regular)
+✅ **Fully configurable** - All values via variables, no hardcoding
+✅ **Azure CNI networking** - Custom VNet and subnets
+✅ **Auto-scaling** - Node pool autoscaling support
+✅ **Network policies** - Azure, Calico, or Cilium
+✅ **Production-ready** - Validated configurations included
 
 ## Architecture Overview
 
+### Private AKS (default)
 - Private AKS cluster with no public endpoints
-- Azure CNI networking with custom VNet and subnets
 - User-assigned managed identity for cluster operations
 - Private DNS zone for internal name resolution
-- Network security with Azure Network Policy
+- Requires VPN/Bastion for access
+
+### Public AKS
+- Public AKS cluster with internet-accessible API server
+- System-assigned managed identity
+- Direct kubectl access from anywhere
+- Ideal for development/testing
 
 ## Prerequisites
 
@@ -210,3 +226,37 @@ Since this is a private cluster, you can access it only from within the VNet or 
    - Check node resource usage
    - Verify autoscaling settings
    - Review pod resource requests/limits
+## Public vs Private Clusters
+
+| Feature | Private Cluster | Public Cluster |
+|---------|----------------|----------------|
+| API Server | No public endpoint | Internet accessible |
+| Identity | User-Assigned | System-Assigned |
+| DNS Zone | Private DNS zone created | Not created |
+| Access | Requires VPN/Bastion | Direct kubectl access |
+| Use Case | Production, high security | Development, testing |
+| Cost | Slightly higher | Lower |
+| Configuration | `private_cluster_enabled = true` | `private_cluster_enabled = false` |
+
+## Quick Examples
+
+### Private AKS Cluster
+```bash
+terraform apply -var-file=examples/private-aks.tfvars
+```
+
+### Public AKS Cluster
+```bash
+terraform apply -var-file=examples/public-aks.tfvars
+```
+
+### Minimal Configuration
+```hcl
+# minimal.tfvars
+prefix   = "myapp"
+location = "eastus"
+env      = "dev"
+private_cluster_enabled = false  # Public cluster for easy access
+node_pools = {}  # No additional node pools
+```
+

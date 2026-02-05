@@ -1,4 +1,7 @@
-# General Configuration Variables
+# ==============================================================================
+# REQUIRED VARIABLES
+# ==============================================================================
+
 variable "prefix" {
   type        = string
   description = "Prefix for resource naming convention"
@@ -14,19 +17,36 @@ variable "env" {
   description = "Environment name (e.g., dev, qa, prod)"
 }
 
+# ==============================================================================
+# AKS CLUSTER CONFIGURATION
+# ==============================================================================
+
+variable "private_cluster_enabled" {
+  type        = bool
+  description = "Enable private cluster (true) or public cluster (false)"
+  default     = true
+}
+
 variable "kubernetes_version" {
   type        = string
   description = "Kubernetes version for AKS cluster"
   default     = "1.30.7"
 }
 
-variable "private_cluster_enabled" {
-  type        = bool
-  description = "Enable private cluster configuration for AKS"
-  default     = true
+variable "sku_tier" {
+  type        = string
+  description = "SKU tier for AKS cluster (Free or Standard)"
+  default     = "Free"
+  validation {
+    condition     = contains(["Free", "Standard"], var.sku_tier)
+    error_message = "SKU tier must be either 'Free' or 'Standard'."
+  }
 }
 
-# Network Configuration Variables
+# ==============================================================================
+# NETWORK CONFIGURATION
+# ==============================================================================
+
 variable "vnet_address_space" {
   type        = list(string)
   description = "Address space for the virtual network"
@@ -45,7 +65,6 @@ variable "pe_subnet_address_prefixes" {
   default     = ["10.172.32.0/24"]
 }
 
-# AKS Configuration Variables
 variable "service_cidr" {
   type        = string
   description = "CIDR for Kubernetes services (non-overlapping with VNet)"
@@ -78,17 +97,10 @@ variable "network_policy" {
   }
 }
 
-variable "sku_tier" {
-  type        = string
-  description = "SKU tier for AKS cluster (Free or Standard)"
-  default     = "Free"
-  validation {
-    condition     = contains(["Free", "Standard"], var.sku_tier)
-    error_message = "SKU tier must be either 'Free' or 'Standard'."
-  }
-}
+# ==============================================================================
+# DEFAULT NODE POOL CONFIGURATION
+# ==============================================================================
 
-# Default Node Pool Variables
 variable "default_node_pool_name" {
   type        = string
   description = "Name of the default node pool"
@@ -125,8 +137,10 @@ variable "default_node_pool_max_pods" {
   default     = 110
 }
 
-# Additional Node Pools Configuration
-# Dynamic node pools - allows multiple custom node pools
+# ==============================================================================
+# ADDITIONAL NODE POOLS
+# ==============================================================================
+
 variable "node_pools" {
   type = map(object({
     vm_size         = string
@@ -135,11 +149,11 @@ variable "node_pools" {
     os_disk_size_gb = number
     priority        = string       # "Regular" or "Spot"
     eviction_policy = string       # "Delete" or "Deallocate" (only for Spot)
-    spot_max_price  = string       # Maximum price for spot instances: "-1" for default/max price, or a positive number > 0.00001
+    spot_max_price  = string       # "-1" for default/max price, or a positive number > 0.00001
     node_labels     = map(string)  # Custom labels for the node pool
     node_taints     = list(string) # Taints to apply to nodes
   }))
-  description = "Map of additional node pools to create. Key is the node pool name. For spot_max_price: use '-1' for default/maximum price, or specify a positive value (must be > 0.00001)."
+  description = "Map of additional node pools to create. For spot_max_price: use '-1' for default/maximum price, or specify a positive value (must be > 0.00001)."
   default     = {}
 
   validation {
@@ -166,7 +180,10 @@ variable "node_pools" {
   }
 }
 
-# Tags Configuration
+# ==============================================================================
+# TAGS
+# ==============================================================================
+
 variable "tags" {
   type        = map(string)
   description = "Tags to apply to all resources"
