@@ -1,92 +1,75 @@
 locals {
-  # General naming convention
-  prefix   = "pri"
-  location = "eastus"
-  env      = "qa"
+  # General naming convention - derived from variables
+  prefix   = var.prefix
+  location = var.location
+  env      = var.env
 
   # Resource naming - Using consistent naming convention for all Azure resources
-  resource_group_name = "${local.prefix}-${local.env}-rg"
-  vnet_name           = "${local.prefix}-${local.env}-vnet"
-  aks_name            = "${local.prefix}-${local.env}-aks"
-  dns_zone_name       = "${local.prefix}.privatelink.${local.location}.azmk8s.io" # Private DNS zone for AKS
-  identity_name       = "${local.prefix}-${local.env}-aks-identity"               # User-assigned managed identity
-  kubernetes_version  = "1.30.7"
-  private_cluster_enabled = true
-  # Network configuration
-  vnet_address_space = ["10.172.0.0/18"] # VNet CIDR: 10.172.0.0 - 10.172.63.255
+  resource_group_name     = "${local.prefix}-${local.env}-rg"
+  vnet_name               = "${local.prefix}-${local.env}-vnet"
+  aks_name                = "${local.prefix}-${local.env}-aks"
+  dns_zone_name           = "${local.prefix}.privatelink.${local.location}.azmk8s.io" # Private DNS zone for AKS (only used if private)
+  identity_name           = "${local.prefix}-${local.env}-aks-identity"               # User-assigned managed identity (only used if private)
+  kubernetes_version      = var.kubernetes_version
+  private_cluster_enabled = var.private_cluster_enabled
+
+  # Network configuration - derived from variables
+  vnet_address_space = var.vnet_address_space
 
   subnets = {
     aks = {
       name             = "aks-subnet"
-      address_prefixes = ["10.172.0.0/19"] # AKS Subnet: 10.172.0.0 - 10.172.31.255
+      address_prefixes = var.aks_subnet_address_prefixes
     }
     private_endpoints = {
       name             = "pe-subnet"
-      address_prefixes = ["10.172.32.0/24"] # PE Subnet: 10.172.32.0 - 10.172.32.255
+      address_prefixes = var.pe_subnet_address_prefixes
     }
   }
 
-  # AKS specific configuration
+  # AKS specific configuration - derived from variables
   aks_config = {
-    service_cidr   = "172.16.0.0/16" # Non-overlapping CIDR for Kubernetes services
-    dns_service_ip = "172.16.0.10"   # Must be within service_cidr
-    network_plugin = "azure"         # Use Azure CNI for advanced networking features
-    network_policy = "azure"         # Azure Network Policy for network security
-    sku_tier       = "Free"          # Standard tier for production workloads
+    service_cidr   = var.service_cidr
+    dns_service_ip = var.dns_service_ip
+    network_plugin = var.network_plugin
+    network_policy = var.network_policy
+    sku_tier       = var.sku_tier
 
     default_node_pool = {
-      name                = "systempool"
-      vm_size             = "Standard_DS2_v2"         # 2 vCPUs, 7 GB memory
+      name                = var.default_node_pool_name
+      vm_size             = var.default_node_pool_vm_size
       type                = "VirtualMachineScaleSets" # Use VMSS for better scaling
-      enable_auto_scaling = true                      # Enable cluster autoscaling
-      max_count           = 3                         # Maximum nodes when scaling up
-      min_count           = 1                         # Minimum nodes when scaling down
-      max_pods            = 110                        # Maximum pods per node
+      enable_auto_scaling = var.default_node_pool_enable_auto_scaling
+      max_count           = var.default_node_pool_max_count
+      min_count           = var.default_node_pool_min_count
+      max_pods            = var.default_node_pool_max_pods
     }
   }
 
-  # Node pool configurations
+  # Node pool configurations - dynamic, supports multiple custom node pools
   node_pools = {
-    # Configuration for the spot node pool
-    spot_pool = {
-      create_nodepool = false
-      nodepool_name   = "spot"
-      vm_size         = "Standard_D4s_v4" # VM size for the spot node pool
-      priority        = "Spot" # Priority set to Spot for cost savings
-      eviction_policy = "Delete" # Eviction policy for spot instances
-      spot_max_price  = "0.3" # Maximum price for spot instances
-      os_disk_size_gb = 125 # OS disk size in GB
-      min_count       = 0 # Minimum number of nodes
-      max_count       = 4 # Maximum number of nodes
-      node_labels = {
-        "kubernetes.azure.com/scalesetpriority" = "spot" # Label indicating spot priority
-        "Project"                               = "qa" # Project label for QA environment
-      }
-      node_taints = ["kubernetes.azure.com/scalesetpriority=spot:NoSchedule"] # Taint to prevent scheduling on spot nodes
-    },
-    # Configuration for the regular node pool
-    regular_pool = {
-      create_nodepool = false
-      nodepool_name   = "regular"
-      vm_size         = "Standard_D4s_v4" # VM size for the regular node pool
-      priority        = "Regular" # Priority set to Regular
-      eviction_policy = null # No eviction policy for regular instances
-      spot_max_price  = null # No spot pricing for regular instances
-      os_disk_size_gb = 125 # OS disk size in GB
-      min_count       = 0 # Minimum number of nodes
-      max_count       = 3 # Maximum number of nodes
-      node_labels = {
-        "Project" = "production" # Project label for production environment
-      }
-      node_taints = [] # No taints for regular nodes
+    for pool_name, pool in var.node_pools : pool_name => {
+      create_nodepool = true
+      nodepool_name   = pool_name
+      vm_size         = pool.vm_size
+      priority        = pool.priority
+      eviction_policy = pool.priority == "Spot" ? pool.eviction_policy : null
+      spot_max_price  = pool.priority == "Spot" ? pool.spot_max_price : null
+      os_disk_size_gb = pool.os_disk_size_gb
+      min_count       = pool.min_count
+      max_count       = pool.max_count
+      node_labels     = pool.node_labels
+      node_taints     = pool.node_taints
     }
-    # Add additional node pool configurations below by copying and modifying the spot or regular node pool configurations
   }
 
-  # Tags to apply to resources
-  tags = {
-    Environment = local.env # Environment tag
-    Terraform   = "true" # Tag indicating Terraform management
-    Project     = "AKS" # Project tag
-  }
+  # Tags to apply to resources - merge user-provided tags with defaults
+  tags = merge(
+    {
+      Environment = local.env
+      Terraform   = "true"
+      Project     = "AKS"
+    },
+    var.tags
+  )
 }

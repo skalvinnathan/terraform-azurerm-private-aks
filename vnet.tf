@@ -4,8 +4,8 @@
 # - Separate subnets for AKS and private endpoints
 # - Private DNS zone for AKS
 module "network" {
-  source = "./modules/network"
-  private_aks = local.private_cluster_enabled
+  source              = "./modules/network"
+  private_aks         = local.private_cluster_enabled
   resource_group_name = azurerm_resource_group.rg.name
   location            = local.location
   vnet_name           = local.vnet_name

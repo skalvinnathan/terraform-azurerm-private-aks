@@ -1,0 +1,78 @@
+# Example Terraform Variables Configuration
+# Copy this file to terraform.tfvars and customize the values for your environment
+# cp terraform.tfvars.example terraform.tfvars
+
+# ==============================================================================
+# REQUIRED VARIABLES - You must provide these
+# ==============================================================================
+
+prefix   = "myapp"   # Prefix for all resource names
+location = "eastus"  # Azure region (e.g., eastus, westus2, centralus)
+env      = "dev"     # Environment (e.g., dev, qa, staging, prod)
+
+# ==============================================================================
+# CLUSTER TYPE - Public or Private
+# ==============================================================================
+
+# Set to true for private cluster (no public endpoint, requires VPN/bastion)
+# Set to false for public cluster (accessible from internet)
+private_cluster_enabled = true
+
+# ==============================================================================
+# OPTIONAL VARIABLES - Have sensible defaults but can be customized
+# ==============================================================================
+
+# Kubernetes Configuration
+kubernetes_version = "1.30.7"  # Kubernetes version
+sku_tier           = "Free"    # "Free" or "Standard" (Standard provides SLA)
+
+# Network Configuration
+vnet_address_space          = ["10.172.0.0/18"]   # VNet CIDR block
+aks_subnet_address_prefixes = ["10.172.0.0/19"]   # AKS subnet CIDR
+pe_subnet_address_prefixes  = ["10.172.32.0/24"]  # Private endpoints subnet CIDR
+
+# AKS Configuration
+service_cidr   = "172.16.0.0/16"  # Kubernetes services CIDR (must not overlap with VNet)
+dns_service_ip = "172.16.0.10"    # Kubernetes DNS IP (must be within service_cidr)
+network_plugin = "azure"          # "azure" or "kubenet"
+network_policy = "azure"          # "azure", "calico", or "cilium"
+
+# Default Node Pool Configuration
+default_node_pool_name                = "systempool"
+default_node_pool_vm_size             = "Standard_DS2_v2"
+default_node_pool_enable_auto_scaling = true
+default_node_pool_min_count           = 1
+default_node_pool_max_count           = 3
+default_node_pool_max_pods            = 110
+
+# ==============================================================================
+# ADDITIONAL NODE POOLS - Dynamic configuration for multiple node pools
+# ==============================================================================
+
+node_pools = {
+  # Example: Spot node pool for cost-effective workloads
+  spot = {
+    vm_size         = "Standard_D4s_v4"
+    min_count       = 0
+    max_count       = 4
+    os_disk_size_gb = 125
+    priority        = "Spot"
+    eviction_policy = "Delete"
+    spot_max_price  = "-1"  # "-1" = use default/maximum price (recommended)
+    node_labels = {
+      "kubernetes.azure.com/scalesetpriority" = "spot"
+      "workload-type"                         = "batch"
+    }
+    node_taints = ["kubernetes.azure.com/scalesetpriority=spot:NoSchedule"]
+  },
+}
+
+# ==============================================================================
+# TAGS - Custom tags for all resources
+# ==============================================================================
+
+tags = {
+  # CostCenter  = "Engineering"
+  # Owner       = "DevOps Team"
+  # ManagedBy   = "Terraform"
+}
